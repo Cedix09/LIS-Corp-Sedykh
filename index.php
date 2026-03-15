@@ -20,4 +20,5 @@
     <h1>Добро пожаловать, <?= htmlspecialchars($_SESSION['username']) ?>!</h1>
     <p>Вы успешно вошли в систему.</p>
 </div>
+<?php include 'footer.php'; ?>
 </body></html>
