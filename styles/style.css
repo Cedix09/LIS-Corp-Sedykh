@@ -374,3 +374,24 @@
     font-weight: 600;
     margin-bottom: 15px;
 }
+.feedback-section {
+    padding: 80px 0;
+}
+
+.feedback-form {
+    max-width: 600px;
+    margin: 0 auto;
+}
+.alert {
+    max-width: 600px;
+    margin: 0 auto 20px;
+}
+.alert-success {
+    background: #e6f4ea;
+    color: #1e7e34;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    color: #842029;
+}
