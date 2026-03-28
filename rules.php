@@ -1,25 +1,10 @@
-<?php
-require_once 'auth_check.php';
-require_once 'config/database.php';
-
-$database = new Database();
-$pdo = $database->getConnection();
-
-$vacancies = [];
-
-try {
-    $stmt = $pdo->query("SELECT * FROM vacancies WHERE is_active = 1");
-    $vacancies = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $vacancies = [];
-}
-?>
+<?php require_once 'auth_check.php'; ?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Карьера | LIS Corp</title>
+<title>Правила форума | LIS Corp</title>
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="styles/style.css">
@@ -28,44 +13,38 @@ try {
 
 <?php include 'header.php'; ?>
 
-<section class="career-section">
+<section class="text-page">
 <div class="container">
 
-<h1 class="text-center mb-5">Карьера в LIS Corp</h1>
+<h1>Правила форума</h1>
 
-<?php if (count($vacancies) > 0): ?>
-
-<div class="vacancies-grid">
-
-<?php foreach ($vacancies as $vacancy): ?>
-
-<div class="vacancy-card">
-
-<h3><?= htmlspecialchars($vacancy['title']) ?></h3>
-
-<p class="vacancy-desc">
-<?= nl2br(htmlspecialchars($vacancy['description'])) ?>
+<p>
+Форум LIS Corp предназначен для обсуждения тем, связанных с деятельностью компании,
+промышленностью и технологиями.
 </p>
 
-<?php if (!empty($vacancy['salary'])): ?>
-<p class="vacancy-salary">
-Зарплата: <?= htmlspecialchars($vacancy['salary']) ?> ₸
+<h2>Общие правила</h2>
+
+<ul>
+<li>Уважайте других участников.</li>
+<li>Запрещены оскорбления и агрессия.</li>
+<li>Не публикуйте ложную информацию.</li>
+</ul>
+
+<h2>Запрещено</h2>
+
+<ul>
+<li>Спам и реклама.</li>
+<li>Нецензурная лексика.</li>
+<li>Публикация запрещённого контента.</li>
+</ul>
+
+<h2>Ответственность</h2>
+
+<p>
+Администрация оставляет за собой право удалять сообщения и блокировать пользователей
+за нарушение правил.
 </p>
-<?php endif; ?>
-
-<button class="btn btn-dark">Откликнуться</button>
-
-</div>
-
-<?php endforeach; ?>
-
-</div>
-
-<?php else: ?>
-
-<p class="text-center">На данный момент открытых вакансий нет.</p>
-
-<?php endif; ?>
 
 </div>
 </section>

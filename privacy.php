@@ -1,25 +1,10 @@
-<?php
-require_once 'auth_check.php';
-require_once 'config/database.php';
-
-$database = new Database();
-$pdo = $database->getConnection();
-
-$vacancies = [];
-
-try {
-    $stmt = $pdo->query("SELECT * FROM vacancies WHERE is_active = 1");
-    $vacancies = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    $vacancies = [];
-}
-?>
+<?php require_once 'auth_check.php'; ?>
 <!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Карьера | LIS Corp</title>
+<title>Политика конфиденциальности | LIS Corp</title>
 
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="styles/style.css">
@@ -28,44 +13,103 @@ try {
 
 <?php include 'header.php'; ?>
 
-<section class="career-section">
+<section class="text-page">
 <div class="container">
 
-<h1 class="text-center mb-5">Карьера в LIS Corp</h1>
+<h1>Политика конфиденциальности</h1>
 
-<?php if (count($vacancies) > 0): ?>
-
-<div class="vacancies-grid">
-
-<?php foreach ($vacancies as $vacancy): ?>
-
-<div class="vacancy-card">
-
-<h3><?= htmlspecialchars($vacancy['title']) ?></h3>
-
-<p class="vacancy-desc">
-<?= nl2br(htmlspecialchars($vacancy['description'])) ?>
+<p>
+Настоящая Политика конфиденциальности определяет порядок обработки и защиты персональных данных пользователей,
+предоставляемых при использовании сайта LIS Corp (далее — «Сайт»).
 </p>
 
-<?php if (!empty($vacancy['salary'])): ?>
-<p class="vacancy-salary">
-Зарплата: <?= htmlspecialchars($vacancy['salary']) ?> ₸
+<h2>1. Общие положения</h2>
+
+<p>
+LIS Corp уважает право пользователей на конфиденциальность и принимает все необходимые меры для защиты
+персональных данных в соответствии с действующим законодательством.
 </p>
-<?php endif; ?>
 
-<button class="btn btn-dark">Откликнуться</button>
+<p>
+Используя Сайт, пользователь выражает согласие с условиями настоящей Политики.
+</p>
 
-</div>
+<h2>2. Сбор персональных данных</h2>
 
-<?php endforeach; ?>
+<p>
+Компания может собирать следующую информацию:
+</p>
 
-</div>
+<ul>
+<li>Имя пользователя</li>
+<li>Адрес электронной почты</li>
+<li>Сообщения, отправленные через формы обратной связи</li>
+<li>Технические данные (IP-адрес, данные браузера)</li>
+</ul>
 
-<?php else: ?>
+<h2>3. Цели обработки данных</h2>
 
-<p class="text-center">На данный момент открытых вакансий нет.</p>
+<p>
+Персональные данные используются исключительно в следующих целях:
+</p>
 
-<?php endif; ?>
+<ul>
+<li>Обработка обращений пользователей</li>
+<li>Обратная связь</li>
+<li>Улучшение качества сервиса</li>
+<li>Обеспечение безопасности Сайта</li>
+</ul>
+
+<h2>4. Хранение и защита данных</h2>
+
+<p>
+LIS Corp обеспечивает хранение персональных данных с использованием современных средств защиты,
+предотвращающих несанкционированный доступ, утрату или изменение информации.
+</p>
+
+<p>
+Доступ к персональным данным имеют только уполномоченные сотрудники компании.
+</p>
+
+<h2>5. Передача данных третьим лицам</h2>
+
+<p>
+Компания не передает персональные данные третьим лицам, за исключением случаев,
+предусмотренных законодательством или необходимых для исполнения обязательств перед пользователем.
+</p>
+
+<h2>6. Права пользователя</h2>
+
+<p>
+Пользователь имеет право:
+</p>
+
+<ul>
+<li>Запросить информацию о своих данных</li>
+<li>Требовать исправления или удаления данных</li>
+<li>Отозвать согласие на обработку данных</li>
+</ul>
+
+<h2>7. Использование файлов cookie</h2>
+
+<p>
+Сайт может использовать файлы cookie для повышения удобства работы пользователя
+и анализа поведения на сайте.
+</p>
+
+<h2>8. Изменения политики</h2>
+
+<p>
+LIS Corp оставляет за собой право изменять настоящую Политику конфиденциальности.
+Актуальная версия всегда доступна на данной странице.
+</p>
+
+<h2>9. Контактная информация</h2>
+
+<p>
+По вопросам обработки персональных данных вы можете обратиться по адресу:
+contact@liscorp.com
+</p>
 
 </div>
 </section>
