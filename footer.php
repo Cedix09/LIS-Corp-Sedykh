@@ -1,12 +1,3 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LIS Corp</title>
-<link rel="stylesheet" href="styles/style.css">
-</head>
-<body>
 <footer class="footer">
 <div class="footer-container">
 <div class="footer-column">
@@ -45,11 +36,22 @@ loading="lazy">
 </iframe>
 </div>
 <div class="footer-column">
+<h3>Information</h3>
+
+<div class="footer-links">
+<a href="faq.php">FAQ</a>
+<a href="rules.php">Правила форума</a>
+<a href="privacy.php">Политика конфиденциальности</a>
+<a href="feedback.php">Обратная связь</a>
+</div>
+
+</div>
+<div class="footer-column">
 <h3>Follow LIS</h3>
 <div class="socials">
 <a href="#">LinkedIn</a>
-<a href="#">Twitter</a>
-<a href="#">YouTube</a>
+<a href="https://x.com/LisCorporation">Twitter</a>
+<a href="https://www.youtube.com/channel/UCFFW5wfa670IvHiu16rLeZg">YouTube</a>
 <a href="#">Instagram</a>
 </div>
 </div>
@@ -58,5 +60,3 @@ loading="lazy">
 <p>© 2026 LIS Corp. All rights reserved.</p>
 </div>
 </footer>
-</body>
-</html>
