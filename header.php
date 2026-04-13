@@ -20,7 +20,7 @@
 </li>
 
 <li class="nat-item">
-<a class="nav-link" href="#">Новости</a>
+<a class="nav-link" href="news.php">Новости</a>
 </li>
 
 <li class="nat-item">
