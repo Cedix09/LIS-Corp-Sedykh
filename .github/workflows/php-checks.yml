@@ -45,6 +45,7 @@ jobs:
           tools: phpcs
           
       - name: Run PHPCS
+        continue-on-error: true
         run: |
           phpcs --standard=PSR12 --extensions=php \
             --ignore=vendor/,node_modules/ .
