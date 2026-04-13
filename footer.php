@@ -49,7 +49,6 @@ loading="lazy">
 <div class="footer-column">
 <h3>Follow LIS</h3>
 <div class="socials">
-<a href="#">LinkedIn</a>
 <a href="https://x.com/LisCorporation">Twitter</a>
 <a href="https://www.youtube.com/channel/UCFFW5wfa670IvHiu16rLeZg">YouTube</a>
 <a href="#">Instagram</a>
