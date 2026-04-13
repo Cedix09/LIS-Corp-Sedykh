@@ -47,6 +47,5 @@ jobs:
       - name: Run PHPCS
         run: |
           phpcs --standard=PSR12 --extensions=php \
-            --ignore=vendor/,node_modules/ \
-            --report=summary .
+            --ignore=vendor/,node_modules/ .
           echo 'Code style check completed!'
