@@ -11,7 +11,7 @@
 </head>
 <body>
 
-<?php include 'header.php'; ?>
+<?php include 'header.php'; 
 
 <section class="text-page">
 <div class="container">
