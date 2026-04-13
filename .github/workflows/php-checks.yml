@@ -35,7 +35,7 @@ jobs:
           php-version: '7.4'
           tools: phpcs
       - name: Run PHPCS
-        run: |
+        run: phpcs
           phpcs --standard=PSR12 --extensions=php \
             --ignore=vendor/,node_modules/ \
             --report=summary .
