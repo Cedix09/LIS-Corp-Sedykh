@@ -1,3 +1,11 @@
+name: PHP Checks
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
 jobs:
   php-lint:
     name: PHP Syntax Check
@@ -13,10 +21,8 @@ jobs:
           
       - name: Check PHP syntax
         run: |
-          # Выполняем проверку и сохраняем результат. || true не дает скрипту упасть, если grep ничего не найдет.
           ERRORS=$(find . -name '*.php' -not -path './vendor/*' -exec php -l {} \; | grep -v 'No syntax errors' || true)
           
-          # Если переменная ERRORS не пустая, значит ошибки есть
           if [ -n "$ERRORS" ]; then
             echo "Found syntax errors:"
             echo "$ERRORS"
@@ -39,7 +45,6 @@ jobs:
           tools: phpcs
           
       - name: Run PHPCS
-        # Добавлен символ | для многострочного скрипта
         run: |
           phpcs --standard=PSR12 --extensions=php \
             --ignore=vendor/,node_modules/ \
