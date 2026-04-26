@@ -478,3 +478,40 @@
 .comment-text {
     line-height: 1.5;
 }
+.search-form {
+    max-width: 400px;
+    margin: 0 auto 30px;
+}
+.news-section a {
+    text-decoration: none;
+}
+
+.news-section a:hover {
+    text-decoration: none;
+}
+.news-content h3 a {
+    color: #111;
+}
+
+.news-content h3 a:hover {
+    color: #0d6efd;
+}
+.news-section .list-group-item {
+    border: none;
+    padding: 10px 0;
+    background: transparent;
+}
+
+.news-section .list-group-item a {
+    color: #333;
+    font-weight: 500;
+}
+
+.news-section .list-group-item a:hover {
+    color: #0d6efd;
+}
+.news-section .search-form input {
+    border-radius: 8px;
+    padding: 10px 15px;
+    border: 1px solid #ddd;
+}

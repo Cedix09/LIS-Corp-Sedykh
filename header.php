@@ -12,15 +12,15 @@
 <ul class="navbar-nav me-auto">
 
 <li class="nav-item">
-<a class="nav-link" href="index.php">Главная</a>
+<a class="nav-link" href="/index.php">Главная</a>
 </li>
 
 <li class="nav-item">
-<a class="nav-link" href="about.php">О компании</a>
+<a class="nav-link" href="/about.php">О компании</a>
 </li>
 
 <li class="nat-item">
-<a class="nav-link" href="news.php">Новости</a>
+<a class="nav-link" href="/news.php">Новости</a>
 </li>
 
 <li class="nat-item">
@@ -28,12 +28,18 @@
 </li>
 
 <li class="nav-item">
-<a class="nav-link" href="career.php">Карьера</a>
+<a class="nav-link" href="/career.php">Карьера</a>
 </li>
 
 <li class="nav-item">
-<a class="nav-link" href="contacts.php">Контакты</a>
+<a class="nav-link" href="/contacts.php">Контакты</a>
 </li>
+
+<?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin'): ?>
+<li class="nav-item">
+<a class="nav-link" href="/admin/admin_news.php">Админка</a>
+</li>
+<?php endif; ?>
 
 </ul>
 

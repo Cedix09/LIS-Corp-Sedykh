@@ -5,18 +5,42 @@ require_once 'config/database.php';
 $database = new Database();
 $pdo = $database->getConnection();
 
-$news = [];
+$search = $_GET['search'] ?? '';
+$category = $_GET['cat'] ?? '';
 
 try {
 
-    $stmt = $pdo->prepare("
+    // Получаем категории
+    $stmt = $pdo->prepare("SELECT * FROM news_categories");
+    $stmt->execute();
+    $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Базовый SQL
+    $sql = "
         SELECT news.*, news_categories.name AS category_name
         FROM news
         LEFT JOIN news_categories ON news.category_id = news_categories.id
-        ORDER BY created_at DESC
-    ");
+        WHERE 1
+    ";
 
-    $stmt->execute();
+    $params = [];
+
+    // Поиск
+    if (!empty($search)) {
+        $sql .= " AND news.title LIKE :search";
+        $params[':search'] = "%$search%";
+    }
+
+    // Фильтр по категории
+    if (!empty($category) && is_numeric($category)) {
+        $sql .= " AND news.category_id = :cat";
+        $params[':cat'] = $category;
+    }
+
+    $sql .= " ORDER BY news.created_at DESC";
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $news = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
@@ -42,6 +66,41 @@ try {
 
 <h1 class="mb-5 text-center">Новости</h1>
 
+<!-- 🔍 ПОИСК -->
+<form method="GET" class="mb-4 search-form">
+<input type="text" name="search" class="form-control" placeholder="Поиск..." value="<?= htmlspecialchars($search) ?>">
+</form>
+
+<div class="row">
+
+<!-- 🔹 SIDEBAR -->
+<div class="col-md-3">
+
+<h5>Категории</h5>
+
+<ul class="list-group mb-4">
+
+<li class="list-group-item">
+<a href="news.php">Все</a>
+</li>
+
+<?php foreach ($categories as $cat): ?>
+
+<li class="list-group-item">
+<a href="news.php?cat=<?= $cat['id'] ?>">
+<?= htmlspecialchars($cat['name']) ?>
+</a>
+</li>
+
+<?php endforeach; ?>
+
+</ul>
+
+</div>
+
+<!-- 🔹 НОВОСТИ -->
+<div class="col-md-9">
+
 <?php foreach ($news as $item): ?>
 
 <div class="news-card">
@@ -66,6 +125,14 @@ try {
 </div>
 
 <?php endforeach; ?>
+
+<?php if (count($news) === 0): ?>
+<p>Ничего не найдено</p>
+<?php endif; ?>
+
+</div>
+
+</div>
 
 </div>
 </section>
