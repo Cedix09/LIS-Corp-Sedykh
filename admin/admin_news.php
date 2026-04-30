@@ -32,7 +32,7 @@ $news = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<title>Админка | Новости</title>
+<title>Админ панель | Новости</title>
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 <link rel="stylesheet" href="../styles/style.css">
 </head>
@@ -42,7 +42,7 @@ $news = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <div class="container mt-5">
 
-<h1 class="mb-4">Админка новостей</h1>
+<h1 class="mb-4">Админ панель новостей</h1>
 
 <a href="admin_add.php" class="btn btn-success mb-3">Добавить новость</a>
 
