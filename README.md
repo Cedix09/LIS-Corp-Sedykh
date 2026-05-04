@@ -1,4 +1,11 @@
 # LIS-Corp-Sedykh
+
+![PHP Checks](https://github.com/Cedix09/LIS-Corp-Sedykh/actions/workflows/php-checks.yml/badge.svg)
+![PHP](https://img.shields.io/badge/PHP-7.4-blue)
+![Database](https://img.shields.io/badge/Database-MariaDB-blue)
+![Status](https://img.shields.io/badge/Status-Completed-brightgreen)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 LIS Corporation WebSite
 
 ## Описание
