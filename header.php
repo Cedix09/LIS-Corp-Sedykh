@@ -24,7 +24,7 @@
                 </li>
 
                 <li class="nat-item">
-                    <a class="nav-link" href="#">Форум</a>
+                    <a class="nav-link" href="/forum.php">Форум</a>
                 </li>
 
                 <li class="nav-item">
