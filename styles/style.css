@@ -709,6 +709,51 @@
     width: auto;
 }
 
+.admin-dashboard {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+}
+
+.admin-stat {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 18px;
+    background: #fff;
+}
+
+.admin-stat span {
+    display: block;
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.admin-stat p {
+    margin: 8px 0 0;
+    color: #666;
+}
+
+.admin-inline-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.admin-inline-form .form-control {
+    min-width: 0;
+}
+
+.admin-news-preview {
+    width: 220px;
+    max-width: 100%;
+    height: 130px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
 .best-post {
     border: 2px solid #28a745;
     background: #f0fff4;
