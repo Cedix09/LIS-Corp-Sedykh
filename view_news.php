@@ -1,6 +1,7 @@
 <?php
 require_once 'auth_check.php';
 require_once 'config/database.php';
+require_once 'config/moderation.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
@@ -12,23 +13,67 @@ if (!$id || !is_numeric($id)) {
 }
 
 $id = (int) $id;
+$userId = (int) $_SESSION['user_id'];
 
-function ensureNewsCommentColumns(PDO $pdo): void
+function redirectToNews(int $newsId): void
 {
-    $columns = $pdo->query("SHOW COLUMNS FROM news_comments")->fetchAll(PDO::FETCH_COLUMN);
+    header("Location: view_news.php?id=$newsId");
+    exit;
+}
 
-    if (!in_array('parent_id', $columns, true)) {
-        $pdo->exec("ALTER TABLE news_comments ADD parent_id INT NULL AFTER news_id");
+try {
+    ensureNewsCommentModerationColumns($pdo);
+} catch (PDOException $e) {
+    die("Ошибка сервера");
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    $commentId = (int) ($_POST['comment_id'] ?? 0);
+
+    if ($action === 'delete_comment') {
+        $stmt = $pdo->prepare("
+            DELETE FROM news_comments
+            WHERE id = :id AND news_id = :news_id AND user_id = :user_id
+        ");
+        $stmt->execute([
+            ':id' => $commentId,
+            ':news_id' => $id,
+            ':user_id' => $userId
+        ]);
+
+        redirectToNews($id);
+    }
+
+    if ($action === 'resubmit_comment') {
+        $stmt = $pdo->prepare("
+            UPDATE news_comments
+            SET moderation_status = 'pending'
+            WHERE id = :id AND news_id = :news_id AND user_id = :user_id
+        ");
+        $stmt->execute([
+            ':id' => $commentId,
+            ':news_id' => $id,
+            ':user_id' => $userId
+        ]);
+
+        redirectToNews($id);
     }
 }
 
-function renderNewsComment(array $comment, array $commentsByParent, array $news, bool $isReply = false): void
+function renderNewsComment(array $comment, array $commentsByParent, array $news, int $userId, bool $isReply = false): void
 {
+    $status = $comment['moderation_status'] ?? 'approved';
+    $isApproved = $status === 'approved';
+    $canManage = (int) ($comment['user_id'] ?? 0) === $userId;
     ?>
-    <div class="comment-item <?= $isReply ? 'comment-reply' : '' ?>">
+    <div class="comment-item <?= $isReply ? 'comment-reply' : '' ?> <?= moderationStatusClass($status) ?>">
 
         <div class="comment-author">
             <?= htmlspecialchars($comment['author_name']) ?>
+            <?php if (!$isApproved): ?>
+                <span class="moderation-badge"><?= moderationStatusLabel($status) ?></span>
+            <?php endif; ?>
         </div>
 
         <div class="comment-date">
@@ -39,13 +84,31 @@ function renderNewsComment(array $comment, array $commentsByParent, array $news,
             <?= nl2br(htmlspecialchars($comment['comment_text'])) ?>
         </div>
 
-        <?php if (!$isReply && isset($_SESSION['username'])): ?>
-            <div class="comment-actions">
+        <div class="comment-actions">
+            <?php if ($isApproved && !$isReply && isset($_SESSION['username'])): ?>
                 <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#news-reply-<?= $comment['id'] ?>">
                     Ответить
                 </button>
-            </div>
+            <?php endif; ?>
 
+            <?php if ($canManage): ?>
+                <form method="POST" onsubmit="return confirm('Удалить комментарий?');">
+                    <input type="hidden" name="action" value="delete_comment">
+                    <input type="hidden" name="comment_id" value="<?= $comment['id'] ?>">
+                    <button class="btn btn-sm btn-outline-danger">Удалить</button>
+                </form>
+
+                <?php if ($status === 'rejected'): ?>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="resubmit_comment">
+                        <input type="hidden" name="comment_id" value="<?= $comment['id'] ?>">
+                        <button class="btn btn-sm btn-outline-warning">На повторную проверку</button>
+                    </form>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+
+        <?php if ($isApproved && !$isReply && isset($_SESSION['username'])): ?>
             <div class="collapse mt-3" id="news-reply-<?= $comment['id'] ?>">
                 <form action="add_comment.php" method="POST" class="comment-form">
                     <input type="hidden" name="news_id" value="<?= $news['id'] ?>">
@@ -63,14 +126,12 @@ function renderNewsComment(array $comment, array $commentsByParent, array $news,
     </div>
 
     <?php foreach ($commentsByParent[$comment['id']] ?? [] as $reply): ?>
-        <?php renderNewsComment($reply, $commentsByParent, $news, true); ?>
+        <?php renderNewsComment($reply, $commentsByParent, $news, $userId, true); ?>
     <?php endforeach; ?>
     <?php
 }
 
 try {
-    ensureNewsCommentColumns($pdo);
-
     $stmt = $pdo->prepare("
         SELECT news.*, news_categories.name AS category_name
         FROM news
@@ -90,9 +151,13 @@ try {
     $stmt = $pdo->prepare("
         SELECT * FROM news_comments
         WHERE news_id = :id
+            AND (moderation_status = 'approved' OR user_id = :user_id)
         ORDER BY created_at ASC
     ");
-    $stmt->execute([':id' => $id]);
+    $stmt->execute([
+        ':id' => $id,
+        ':user_id' => $userId
+    ]);
     $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
@@ -125,7 +190,7 @@ foreach ($comments as $comment) {
 <h1 class="mb-3"><?= htmlspecialchars($news['title']) ?></h1>
 
 <?php if (isset($_GET['success'])): ?>
-<div class="alert alert-success text-center">Комментарий добавлен</div>
+<div class="alert alert-success text-center">Комментарий отправлен на проверку</div>
 <?php endif; ?>
 
 <?php if (isset($_GET['error'])): ?>
@@ -167,7 +232,7 @@ foreach ($comments as $comment) {
 <textarea name="comment_text" class="form-control" rows="4" maxlength="1000" placeholder="Ваш комментарий" required></textarea>
 </div>
 
-<button class="btn btn-dark">Отправить</button>
+<button class="btn btn-dark">Отправить на проверку</button>
 
 </form>
 
@@ -180,7 +245,7 @@ foreach ($comments as $comment) {
 <div class="comments-list mt-4">
 
 <?php foreach ($commentsByParent[0] ?? [] as $comment): ?>
-    <?php renderNewsComment($comment, $commentsByParent, $news); ?>
+    <?php renderNewsComment($comment, $commentsByParent, $news, $userId); ?>
 <?php endforeach; ?>
 
 </div>

@@ -1,6 +1,7 @@
 <?php
 require_once 'auth_check.php';
 require_once 'config/database.php';
+require_once 'config/moderation.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
@@ -13,24 +14,8 @@ if (!$id || !is_numeric($id)) {
 
 $id = (int) $id;
 $ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$userId = (int) $_SESSION['user_id'];
 $errors = [];
-
-function ensureForumPostColumns(PDO $pdo): void
-{
-    $columns = $pdo->query("SHOW COLUMNS FROM forum_posts")->fetchAll(PDO::FETCH_COLUMN);
-
-    if (!in_array('parent_id', $columns, true)) {
-        $pdo->exec("ALTER TABLE forum_posts ADD parent_id INT NULL AFTER topic_id");
-    }
-
-    if (!in_array('edited_at', $columns, true)) {
-        $pdo->exec("ALTER TABLE forum_posts ADD edited_at DATETIME NULL AFTER created_at");
-    }
-
-    if (!in_array('deleted_at', $columns, true)) {
-        $pdo->exec("ALTER TABLE forum_posts ADD deleted_at DATETIME NULL AFTER edited_at");
-    }
-}
 
 function redirectToTopic(int $topicId): void
 {
@@ -39,7 +24,7 @@ function redirectToTopic(int $topicId): void
 }
 
 try {
-    ensureForumPostColumns($pdo);
+    ensureForumPostModerationColumns($pdo);
 
     $stmt = $pdo->prepare("
         SELECT forum_topics.*, forum_categories.title AS category_name
@@ -59,13 +44,12 @@ try {
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? 'create';
-    $userId = (int) $_SESSION['user_id'];
 
     if ($action === 'delete') {
         $postId = (int) ($_POST['post_id'] ?? 0);
 
         $stmt = $pdo->prepare("
-            SELECT id, parent_id FROM forum_posts
+            SELECT id FROM forum_posts
             WHERE id = :post_id AND topic_id = :topic_id AND user_id = :user_id
         ");
         $stmt->execute([
@@ -73,28 +57,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':topic_id' => $id,
             ':user_id' => $userId
         ]);
-        $postForDelete = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($postForDelete) {
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM forum_posts WHERE parent_id = :post_id");
+        if ($stmt->fetch()) {
+            $stmt = $pdo->prepare("DELETE FROM forum_votes WHERE post_id = :post_id");
             $stmt->execute([':post_id' => $postId]);
-            $hasReplies = (int) $stmt->fetchColumn() > 0;
 
-            if ($hasReplies) {
-                $stmt = $pdo->prepare("
-                    UPDATE forum_posts
-                    SET message = '', deleted_at = NOW()
-                    WHERE id = :post_id
-                ");
-                $stmt->execute([':post_id' => $postId]);
-            } else {
-                $stmt = $pdo->prepare("DELETE FROM forum_votes WHERE post_id = :post_id");
-                $stmt->execute([':post_id' => $postId]);
-
-                $stmt = $pdo->prepare("DELETE FROM forum_posts WHERE id = :post_id");
-                $stmt->execute([':post_id' => $postId]);
-            }
+            $stmt = $pdo->prepare("DELETE FROM forum_posts WHERE id = :post_id");
+            $stmt->execute([':post_id' => $postId]);
         }
+
+        redirectToTopic($id);
+    }
+
+    if ($action === 'resubmit') {
+        $postId = (int) ($_POST['post_id'] ?? 0);
+
+        $stmt = $pdo->prepare("
+            UPDATE forum_posts
+            SET moderation_status = 'pending'
+            WHERE id = :id AND topic_id = :topic_id AND user_id = :user_id
+        ");
+        $stmt->execute([
+            ':id' => $postId,
+            ':topic_id' => $id,
+            ':user_id' => $userId
+        ]);
 
         redirectToTopic($id);
     }
@@ -114,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($errors)) {
             $stmt = $pdo->prepare("
                 UPDATE forum_posts
-                SET message = :message, edited_at = NOW()
+                SET message = :message, edited_at = NOW(), moderation_status = 'pending'
                 WHERE id = :id AND topic_id = :topic_id AND user_id = :user_id
             ");
             $stmt->execute([
@@ -143,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($parentId) {
             $stmt = $pdo->prepare("
                 SELECT id FROM forum_posts
-                WHERE id = :id AND topic_id = :topic_id AND parent_id IS NULL
+                WHERE id = :id AND topic_id = :topic_id AND parent_id IS NULL AND moderation_status = 'approved'
             ");
             $stmt->execute([
                 ':id' => $parentId,
@@ -157,8 +144,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (empty($errors)) {
             $stmt = $pdo->prepare("
-                INSERT INTO forum_posts (topic_id, parent_id, message, author_ip, user_id)
-                VALUES (:topic_id, :parent_id, :message, :ip, :user_id)
+                INSERT INTO forum_posts (topic_id, parent_id, message, author_ip, user_id, moderation_status)
+                VALUES (:topic_id, :parent_id, :message, :ip, :user_id, 'pending')
             ");
 
             $stmt->execute([
@@ -180,9 +167,14 @@ try {
         FROM forum_posts
         INNER JOIN users ON forum_posts.user_id = users.id
         WHERE topic_id = :id
+            AND deleted_at IS NULL
+            AND (moderation_status = 'approved' OR forum_posts.user_id = :user_id)
         ORDER BY is_best DESC, created_at ASC
     ");
-    $stmt->execute([':id' => $id]);
+    $stmt->execute([
+        ':id' => $id,
+        ':user_id' => $userId
+    ]);
     $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     die("Ошибка");
@@ -205,27 +197,30 @@ function renderForumPost(array $post, array $postsByParent, PDO $pdo, string $ip
         ':ip' => $ip
     ]);
     $userVote = $stmt->fetchColumn();
-    $isDeleted = !empty($post['deleted_at']);
-    $canManage = !$isDeleted && (int) $post['user_id'] === $userId;
+    $status = $post['moderation_status'] ?? 'approved';
+    $canManage = (int) $post['user_id'] === $userId;
+    $isApproved = $status === 'approved';
     ?>
 
-    <div class="forum-card <?= $post['is_best'] ? 'best-post' : '' ?> <?= $isReply ? 'forum-reply' : '' ?>">
+    <div class="forum-card <?= $post['is_best'] && $isApproved ? 'best-post' : '' ?> <?= $isReply ? 'forum-reply' : '' ?> <?= moderationStatusClass($status) ?>">
 
         <div class="forum-meta mb-2">
-            <?= $isDeleted ? 'Комментарий удален' : htmlspecialchars($post['username']) ?> •
+            <?= htmlspecialchars($post['username']) ?> •
             <?= date('d.m.Y H:i', strtotime($post['created_at'])) ?>
-            <?php if (!$isDeleted && !empty($post['edited_at'])): ?>
+            <?php if (!empty($post['edited_at'])): ?>
                 <span class="comment-edited">изменено <?= date('d.m.Y H:i', strtotime($post['edited_at'])) ?></span>
+            <?php endif; ?>
+            <?php if (!$isApproved): ?>
+                <span class="moderation-badge"><?= moderationStatusLabel($status) ?></span>
             <?php endif; ?>
         </div>
 
         <div class="forum-text">
-            <?= $isDeleted ? '<em>Текст комментария удален автором.</em>' : nl2br(htmlspecialchars($post['message'])) ?>
+            <?= nl2br(htmlspecialchars($post['message'])) ?>
         </div>
 
-        <?php if (!$isDeleted): ?>
         <div class="comment-actions">
-            <?php if (!$isReply): ?>
+            <?php if ($isApproved && !$isReply): ?>
                 <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#reply-<?= $post['id'] ?>">
                     Ответить
                 </button>
@@ -241,17 +236,24 @@ function renderForumPost(array $post, array $postsByParent, PDO $pdo, string $ip
                     <input type="hidden" name="post_id" value="<?= $post['id'] ?>">
                     <button class="btn btn-sm btn-outline-danger">Удалить</button>
                 </form>
+
+                <?php if ($status === 'rejected'): ?>
+                    <form method="POST">
+                        <input type="hidden" name="action" value="resubmit">
+                        <input type="hidden" name="post_id" value="<?= $post['id'] ?>">
+                        <button class="btn btn-sm btn-outline-warning">На повторную проверку</button>
+                    </form>
+                <?php endif; ?>
             <?php endif; ?>
 
-            <?php if ($_SESSION['role'] === 'admin' && !$isReply): ?>
+            <?php if ($_SESSION['role'] === 'admin' && $isApproved && !$isReply): ?>
                 <a href="best_answer.php?post_id=<?= $post['id'] ?>&topic_id=<?= $topicId ?>" class="btn btn-sm btn-outline-success">
                     Сделать лучшим
                 </a>
             <?php endif; ?>
         </div>
-        <?php endif; ?>
 
-        <?php if (!$isDeleted && !$isReply): ?>
+        <?php if ($isApproved && !$isReply): ?>
             <div class="collapse mt-3" id="reply-<?= $post['id'] ?>">
                 <form method="POST">
                     <input type="hidden" name="action" value="reply">
@@ -262,7 +264,7 @@ function renderForumPost(array $post, array $postsByParent, PDO $pdo, string $ip
             </div>
         <?php endif; ?>
 
-        <?php if (!$isDeleted && $canManage): ?>
+        <?php if ($canManage): ?>
             <div class="collapse mt-3" id="edit-<?= $post['id'] ?>">
                 <form method="POST">
                     <input type="hidden" name="action" value="edit">
@@ -273,7 +275,7 @@ function renderForumPost(array $post, array $postsByParent, PDO $pdo, string $ip
             </div>
         <?php endif; ?>
 
-        <?php if (!$isDeleted): ?>
+        <?php if ($isApproved): ?>
         <div class="vote-box">
             <form action="vote.php" method="POST">
                 <input type="hidden" name="post_id" value="<?= $post['id'] ?>">
@@ -333,7 +335,7 @@ function renderForumPost(array $post, array $postsByParent, PDO $pdo, string $ip
 </div>
 
 <?php foreach ($postsByParent[0] ?? [] as $post): ?>
-    <?php renderForumPost($post, $postsByParent, $pdo, $ip, $id, (int) $_SESSION['user_id']); ?>
+    <?php renderForumPost($post, $postsByParent, $pdo, $ip, $id, $userId); ?>
 <?php endforeach; ?>
 
 <?php if (!empty($errors)): ?>

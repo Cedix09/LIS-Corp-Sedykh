@@ -1,5 +1,6 @@
 <?php
 require_once 'config/database.php';
+require_once 'config/moderation.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
@@ -14,6 +15,19 @@ if (!$post_id || !is_numeric($post_id) || !in_array($type, ['up','down'])) {
 }
 
 try {
+    ensureForumPostModerationColumns($pdo);
+
+    $stmt = $pdo->prepare("
+        SELECT moderation_status FROM forum_posts
+        WHERE id = :post_id
+    ");
+    $stmt->execute([':post_id' => $post_id]);
+    $status = $stmt->fetchColumn();
+
+    if ($status !== 'approved') {
+        header("Location: " . ($_SERVER['HTTP_REFERER'] ?? 'forum.php'));
+        exit;
+    }
 
     // ищем существующий голос
     $stmt = $pdo->prepare("

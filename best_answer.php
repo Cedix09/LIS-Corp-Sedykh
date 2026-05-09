@@ -1,5 +1,6 @@
 <?php
 require_once 'config/database.php';
+require_once 'config/moderation.php';
 require_once 'auth_check.php';
 
 if ($_SESSION['role'] !== 'admin') {
@@ -17,6 +18,21 @@ if (!$post_id || !$topic_id) {
 }
 
 try {
+    ensureForumPostModerationColumns($pdo);
+
+    $stmt = $pdo->prepare("
+        SELECT id FROM forum_posts
+        WHERE id = :id AND topic_id = :topic AND moderation_status = 'approved'
+    ");
+    $stmt->execute([
+        ':id' => $post_id,
+        ':topic' => $topic_id
+    ]);
+
+    if (!$stmt->fetchColumn()) {
+        header("Location: topic_view.php?id=$topic_id");
+        exit;
+    }
 
     // сброс всех best в теме
     $stmt = $pdo->prepare("

@@ -1,6 +1,7 @@
 <?php
 require_once 'auth_check.php';
 require_once 'config/database.php';
+require_once 'config/moderation.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
@@ -10,6 +11,7 @@ $category = $_GET['cat'] ?? '';
 $sort = $_GET['sort'] ?? 'new';
 
 try {
+    ensureForumPostModerationColumns($pdo);
 
     $stmt = $pdo->prepare("SELECT * FROM forum_categories");
     $stmt->execute();
@@ -17,7 +19,7 @@ try {
 
     $sql = "
         SELECT forum_topics.*, forum_categories.title AS category_name,
-        (SELECT COUNT(*) FROM forum_posts WHERE topic_id = forum_topics.id) AS replies
+        (SELECT COUNT(*) FROM forum_posts WHERE topic_id = forum_topics.id AND moderation_status = 'approved') AS replies
         FROM forum_topics
         LEFT JOIN forum_categories ON forum_topics.category_id = forum_categories.id
         WHERE 1
