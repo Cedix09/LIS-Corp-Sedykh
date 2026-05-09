@@ -617,6 +617,28 @@
     margin-top: 5px;
 }
 
+.forum-reply {
+    margin-left: 32px;
+    border-left: 3px solid #dee2e6;
+}
+
+.comment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.comment-actions form {
+    margin: 0;
+}
+
+.comment-edited {
+    color: #999;
+    margin-left: 8px;
+}
+
 .best-post {
     border: 2px solid #28a745;
     background: #f0fff4;
