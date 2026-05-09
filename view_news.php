@@ -11,7 +11,65 @@ if (!$id || !is_numeric($id)) {
     die("Ошибка 404");
 }
 
+$id = (int) $id;
+
+function ensureNewsCommentColumns(PDO $pdo): void
+{
+    $columns = $pdo->query("SHOW COLUMNS FROM news_comments")->fetchAll(PDO::FETCH_COLUMN);
+
+    if (!in_array('parent_id', $columns, true)) {
+        $pdo->exec("ALTER TABLE news_comments ADD parent_id INT NULL AFTER news_id");
+    }
+}
+
+function renderNewsComment(array $comment, array $commentsByParent, array $news, bool $isReply = false): void
+{
+    ?>
+    <div class="comment-item <?= $isReply ? 'comment-reply' : '' ?>">
+
+        <div class="comment-author">
+            <?= htmlspecialchars($comment['author_name']) ?>
+        </div>
+
+        <div class="comment-date">
+            <?= date('d.m.Y H:i', strtotime($comment['created_at'])) ?>
+        </div>
+
+        <div class="comment-text">
+            <?= nl2br(htmlspecialchars($comment['comment_text'])) ?>
+        </div>
+
+        <?php if (!$isReply && isset($_SESSION['username'])): ?>
+            <div class="comment-actions">
+                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#news-reply-<?= $comment['id'] ?>">
+                    Ответить
+                </button>
+            </div>
+
+            <div class="collapse mt-3" id="news-reply-<?= $comment['id'] ?>">
+                <form action="add_comment.php" method="POST" class="comment-form">
+                    <input type="hidden" name="news_id" value="<?= $news['id'] ?>">
+                    <input type="hidden" name="parent_id" value="<?= $comment['id'] ?>">
+
+                    <div class="mb-2">
+                        <textarea name="comment_text" class="form-control" rows="3" maxlength="1000" placeholder="Ваш ответ" required></textarea>
+                    </div>
+
+                    <button class="btn btn-dark btn-sm">Отправить</button>
+                </form>
+            </div>
+        <?php endif; ?>
+
+    </div>
+
+    <?php foreach ($commentsByParent[$comment['id']] ?? [] as $reply): ?>
+        <?php renderNewsComment($reply, $commentsByParent, $news, true); ?>
+    <?php endforeach; ?>
+    <?php
+}
+
 try {
+    ensureNewsCommentColumns($pdo);
 
     $stmt = $pdo->prepare("
         SELECT news.*, news_categories.name AS category_name
@@ -32,13 +90,19 @@ try {
     $stmt = $pdo->prepare("
         SELECT * FROM news_comments
         WHERE news_id = :id
-        ORDER BY created_at DESC
+        ORDER BY created_at ASC
     ");
     $stmt->execute([':id' => $id]);
     $comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
     die("Ошибка сервера");
+}
+
+$commentsByParent = [];
+foreach ($comments as $comment) {
+    $parentKey = $comment['parent_id'] ?? 0;
+    $commentsByParent[$parentKey][] = $comment;
 }
 ?>
 <!DOCTYPE html>
@@ -74,12 +138,14 @@ try {
 <?php endif; ?>
 
 <div class="news-meta mb-4">
-<?= htmlspecialchars($news['category_name']) ?> • 
-<?= date('d.m.Y', strtotime($news['created_at'])) ?> • 
+<?= htmlspecialchars($news['category_name']) ?> •
+<?= date('d.m.Y', strtotime($news['created_at'])) ?> •
 Просмотры: <?= $news['views'] ?>
 </div>
 
+<?php if (!empty($news['preview_img'])): ?>
 <img src="images/news/<?= htmlspecialchars($news['preview_img']) ?>" class="news-image mb-4">
+<?php endif; ?>
 
 <div class="news-text">
 <?= nl2br(htmlspecialchars($news['content'])) ?>
@@ -113,24 +179,8 @@ try {
 
 <div class="comments-list mt-4">
 
-<?php foreach ($comments as $comment): ?>
-
-<div class="comment-item">
-
-<div class="comment-author">
-<?= htmlspecialchars($comment['author_name']) ?>
-</div>
-
-<div class="comment-date">
-<?= date('d.m.Y H:i', strtotime($comment['created_at'])) ?>
-</div>
-
-<div class="comment-text">
-<?= nl2br(htmlspecialchars($comment['comment_text'])) ?>
-</div>
-
-</div>
-
+<?php foreach ($commentsByParent[0] ?? [] as $comment): ?>
+    <?php renderNewsComment($comment, $commentsByParent, $news); ?>
 <?php endforeach; ?>
 
 </div>
@@ -139,6 +189,7 @@ try {
 </section>
 
 <?php include 'footer.php'; ?>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>

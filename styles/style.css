@@ -478,6 +478,23 @@
 .comment-text {
     line-height: 1.5;
 }
+
+.comment-reply {
+    margin-left: 32px;
+    border-left: 3px solid #dee2e6;
+}
+
+.comment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+}
+
+.comment-actions form {
+    margin: 0;
+}
 .search-form {
     max-width: 400px;
     margin: 0 auto 30px;
