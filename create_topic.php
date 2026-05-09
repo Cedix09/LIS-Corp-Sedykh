@@ -1,6 +1,7 @@
 <?php
 require_once 'auth_check.php';
 require_once 'config/database.php';
+require_once 'config/activity.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
@@ -59,6 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':category' => $category,
             ':ip' => $ip
         ]);
+
+        logUserActivity($pdo, (int) $_SESSION['user_id'], 'create_topic', 'forum_topic', (int) $pdo->lastInsertId(), 'Создал тему форума: ' . $title);
 
         header("Location: forum.php");
         exit;

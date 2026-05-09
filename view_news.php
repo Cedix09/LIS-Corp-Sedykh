@@ -2,6 +2,7 @@
 require_once 'auth_check.php';
 require_once 'config/database.php';
 require_once 'config/moderation.php';
+require_once 'config/activity.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
@@ -42,6 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':user_id' => $userId
         ]);
 
+        logUserActivity($pdo, $userId, 'delete_comment', 'news_comment', $commentId, 'Удалил комментарий к новости');
+
         redirectToNews($id);
     }
 
@@ -56,6 +59,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':news_id' => $id,
             ':user_id' => $userId
         ]);
+
+        logUserActivity($pdo, $userId, 'resubmit_comment', 'news_comment', $commentId, 'Отправил комментарий новости на повторную проверку');
 
         redirectToNews($id);
     }

@@ -3,10 +3,12 @@ session_start(); // ОБЯЗАТЕЛЬНО первой строкой!
 
 
 require_once 'config/database.php';
+require_once 'config/activity.php';
 require_once 'models/User.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
+ensureAdminTools($pdo);
 $userModel = new User($pdo);
 $error = '';
 
@@ -28,7 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Ищем пользователя по email
         $user = $userModel->findByEmail($email);
 
-        if ($user && password_verify($password, $user['password'])) {
+        if ($user && !empty($user['banned_at'])) {
+            $error = 'Ваш аккаунт заблокирован.';
+        } elseif ($user && password_verify($password, $user['password'])) {
             // Пароль верный! Сохраняем в сессию
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];

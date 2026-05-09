@@ -1,11 +1,13 @@
 <?php
 require_once 'admin_check.php';
 require_once '../config/database.php';
+require_once '../config/activity.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
-
 $errors = [];
+
+ensureAdminTools($pdo);
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_news_id'])) {
     $id = $_POST['delete_news_id'];
@@ -54,6 +56,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_topic_id'])) {
     }
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['user_action'], $_POST['user_id'])) {
+    $targetUserId = (int) $_POST['user_id'];
+    $action = $_POST['user_action'];
+
+    if ($targetUserId === (int) $_SESSION['user_id']) {
+        $errors[] = "Нельзя менять роль или банить свой аккаунт";
+    } elseif ($action === 'change_role') {
+        $role = $_POST['role'] ?? 'user';
+
+        if (in_array($role, ['user', 'moder', 'admin'], true)) {
+            $stmt = $pdo->prepare("UPDATE users SET role = :role WHERE id = :id");
+            $stmt->execute([
+                ':role' => $role,
+                ':id' => $targetUserId
+            ]);
+
+            header("Location: admin_news.php?user_updated=1");
+            exit;
+        }
+
+        $errors[] = "Некорректная роль";
+    } elseif ($action === 'ban') {
+        $stmt = $pdo->prepare("UPDATE users SET banned_at = NOW() WHERE id = :id");
+        $stmt->execute([':id' => $targetUserId]);
+
+        header("Location: admin_news.php?user_updated=1");
+        exit;
+    } elseif ($action === 'unban') {
+        $stmt = $pdo->prepare("UPDATE users SET banned_at = NULL WHERE id = :id");
+        $stmt->execute([':id' => $targetUserId]);
+
+        header("Location: admin_news.php?user_updated=1");
+        exit;
+    }
+}
+
 $stmt = $pdo->prepare("
     SELECT news.*, news_categories.name AS category_name
     FROM news
@@ -72,6 +110,39 @@ $stmt = $pdo->prepare("
 ");
 $stmt->execute();
 $topics = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmt = $pdo->prepare("
+    SELECT id, username, email, role, banned_at
+    FROM users
+    ORDER BY id ASC
+");
+$stmt->execute();
+$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$stmt = $pdo->prepare("
+    SELECT * FROM user_activity_logs
+    ORDER BY created_at DESC
+");
+$stmt->execute();
+$logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+$logsByUser = [];
+foreach ($logs as $log) {
+    $logsByUser[$log['user_id']][] = $log;
+}
+
+function roleLabel(string $role): string
+{
+    if ($role === 'admin') {
+        return 'Админ';
+    }
+
+    if ($role === 'moder') {
+        return 'Модератор';
+    }
+
+    return 'Пользователь';
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -95,6 +166,10 @@ $topics = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 <?php if (isset($_GET['topic_deleted'])): ?>
 <div class="alert alert-success">Тема форума удалена</div>
+<?php endif; ?>
+
+<?php if (isset($_GET['user_updated'])): ?>
+<div class="alert alert-success">Пользователь обновлен</div>
 <?php endif; ?>
 
 <?php if (!empty($errors)): ?>
@@ -181,7 +256,91 @@ $topics = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 </table>
 
+<h2 class="h4 mt-5 mb-3">Пользователи</h2>
+
+<table class="table table-bordered align-middle admin-users-table">
+
+<tr>
+<th>ID</th>
+<th>Пользователь</th>
+<th>Email</th>
+<th>Роль</th>
+<th>Статус</th>
+<th>Действия</th>
+</tr>
+
+<?php foreach ($users as $user): ?>
+<?php $logsForUser = $logsByUser[$user['id']] ?? []; ?>
+
+<tr>
+<td><?= $user['id'] ?></td>
+<td><?= htmlspecialchars($user['username']) ?></td>
+<td><?= htmlspecialchars($user['email'] ?? '') ?></td>
+<td><?= roleLabel($user['role'] ?? 'user') ?></td>
+<td><?= empty($user['banned_at']) ? 'Активен' : 'Забанен' ?></td>
+<td>
+<button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#user-logs-<?= $user['id'] ?>">
+Логи
+</button>
+
+<form method="POST" class="admin-user-action">
+<input type="hidden" name="user_action" value="change_role">
+<input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+<select name="role" class="form-select form-select-sm">
+<option value="user" <?= ($user['role'] ?? 'user') === 'user' ? 'selected' : '' ?>>Пользователь</option>
+<option value="moder" <?= ($user['role'] ?? '') === 'moder' ? 'selected' : '' ?>>Модератор</option>
+<option value="admin" <?= ($user['role'] ?? '') === 'admin' ? 'selected' : '' ?>>Админ</option>
+</select>
+<button class="btn btn-sm btn-outline-secondary">Сменить роль</button>
+</form>
+
+<?php if (empty($user['banned_at'])): ?>
+<form method="POST" class="admin-user-action" onsubmit="return confirm('Забанить пользователя?');">
+<input type="hidden" name="user_action" value="ban">
+<input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+<button class="btn btn-sm btn-outline-danger">Забанить</button>
+</form>
+<?php else: ?>
+<form method="POST" class="admin-user-action">
+<input type="hidden" name="user_action" value="unban">
+<input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+<button class="btn btn-sm btn-outline-success">Разбанить</button>
+</form>
+<?php endif; ?>
+</td>
+</tr>
+
+<tr class="collapse" id="user-logs-<?= $user['id'] ?>">
+<td colspan="6">
+<?php if ($logsForUser): ?>
+<table class="table table-sm mb-0">
+<tr>
+<th>Дата</th>
+<th>Действие</th>
+<th>Объект</th>
+<th>Описание</th>
+</tr>
+<?php foreach ($logsForUser as $log): ?>
+<tr>
+<td><?= date('d.m.Y H:i', strtotime($log['created_at'])) ?></td>
+<td><?= htmlspecialchars($log['action']) ?></td>
+<td><?= htmlspecialchars($log['entity_type']) ?> #<?= htmlspecialchars((string) $log['entity_id']) ?></td>
+<td><?= htmlspecialchars($log['description']) ?></td>
+</tr>
+<?php endforeach; ?>
+</table>
+<?php else: ?>
+<div class="text-muted">Действий пока нет</div>
+<?php endif; ?>
+</td>
+</tr>
+
+<?php endforeach; ?>
+
+</table>
+
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

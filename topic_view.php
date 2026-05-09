@@ -2,6 +2,7 @@
 require_once 'auth_check.php';
 require_once 'config/database.php';
 require_once 'config/moderation.php';
+require_once 'config/activity.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
@@ -64,6 +65,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $stmt = $pdo->prepare("DELETE FROM forum_posts WHERE id = :post_id");
             $stmt->execute([':post_id' => $postId]);
+
+            logUserActivity($pdo, $userId, 'delete_comment', 'forum_post', $postId, 'Удалил комментарий на форуме');
         }
 
         redirectToTopic($id);
@@ -82,6 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ':topic_id' => $id,
             ':user_id' => $userId
         ]);
+
+        logUserActivity($pdo, $userId, 'resubmit_comment', 'forum_post', $postId, 'Отправил комментарий форума на повторную проверку');
 
         redirectToTopic($id);
     }
@@ -110,6 +115,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':topic_id' => $id,
                 ':user_id' => $userId
             ]);
+
+            logUserActivity($pdo, $userId, 'edit_comment', 'forum_post', $postId, 'Отредактировал комментарий форума');
 
             redirectToTopic($id);
         }
@@ -155,6 +162,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':ip' => $ip,
                 ':user_id' => $userId
             ]);
+
+            logUserActivity($pdo, $userId, 'create_comment', 'forum_post', (int) $pdo->lastInsertId(), 'Написал комментарий на форуме');
 
             redirectToTopic($id);
         }

@@ -694,6 +694,21 @@
     margin: 0;
 }
 
+.admin-users-table td {
+    vertical-align: middle;
+}
+
+.admin-user-action {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    margin: 4px 0 0 4px;
+}
+
+.admin-user-action .form-select {
+    width: auto;
+}
+
 .best-post {
     border: 2px solid #28a745;
     background: #f0fff4;

@@ -2,6 +2,7 @@
 require_once 'auth_check.php';
 require_once 'config/database.php';
 require_once 'config/moderation.php';
+require_once 'config/activity.php';
 
 $database = new Database();
 $pdo = $database->getConnection();
@@ -71,6 +72,8 @@ try {
         ':name' => $name,
         ':text' => $text
     ]);
+
+    logUserActivity($pdo, (int) $user_id, 'create_comment', 'news_comment', (int) $pdo->lastInsertId(), 'Написал комментарий к новости #' . $news_id);
 
     header("Location: view_news.php?id=$news_id&success=moderation");
     exit;
