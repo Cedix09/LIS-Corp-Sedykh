@@ -51,7 +51,7 @@
 
             <div class="d-flex align-items-center text-white">
                 <span class="me-3">
-                    <?= htmlspecialchars($_SESSION['username']) ?>
+                    <a class="nav-link" href="/profile.php"><?= htmlspecialchars($_SESSION['username']) ?></a>
                 </span>
 
                 <a href="/logout.php" class="btn btn-outline-light btn-sm">
