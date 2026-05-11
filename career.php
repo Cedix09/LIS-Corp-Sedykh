@@ -53,7 +53,7 @@ try {
 </p>
 <?php endif; ?>
 
-<button class="btn btn-dark">Откликнуться</button>
+<a href="feedback.php"><button class="btn btn-dark">Откликнуться</button></a>
 
 </div>
 
