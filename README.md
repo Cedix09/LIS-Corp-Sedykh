@@ -5,6 +5,9 @@
 ![Database](https://img.shields.io/badge/Database-MariaDB-blue)
 ![Status](https://img.shields.io/badge/Status-Completed-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-green)
+![Version](https://img.shields.io/badge/version-1.0.0-green)
+
+Последний релиз: [v1.0.0](https://github.com/Cedix09/LIS-Corp-Sedykh/releases/tag/v1.0.0)
 
 LIS Corporation WebSite
 
